@@ -27,7 +27,12 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="participants-section">
               <strong>Participants:</strong>
               <ul class="participants-list">
-                ${details.participants.map(email => `<li>${email}</li>`).join("")}
+                ${details.participants.map(email => `
+                  <li class="participant-item">
+                    <span class="participant-email">${email}</span>
+                    <span class="delete-participant" title="Remove" data-activity="${name}" data-email="${email}">&#128465;</span>
+                  </li>
+                `).join("")}
               </ul>
             </div>
           `;
@@ -39,6 +44,28 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
           `;
         }
+      // Event delegation for delete icon
+      activitiesList.addEventListener("click", async (event) => {
+        if (event.target.classList.contains("delete-participant")) {
+          const activity = event.target.getAttribute("data-activity");
+          const email = event.target.getAttribute("data-email");
+          if (confirm(`Remove ${email} from ${activity}?`)) {
+            try {
+              const response = await fetch(`/activities/${encodeURIComponent(activity)}/unregister?email=${encodeURIComponent(email)}`, {
+                method: "POST",
+              });
+              const result = await response.json();
+              if (response.ok) {
+                fetchActivities();
+              } else {
+                alert(result.detail || "Failed to unregister participant.");
+              }
+            } catch (error) {
+              alert("Failed to unregister participant.");
+            }
+          }
+        }
+      });
 
         activityCard.innerHTML = `
           <h4>${name}</h4>
@@ -83,6 +110,7 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        fetchActivities(); // Refresh activities list after successful signup
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
